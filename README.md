@@ -179,6 +179,43 @@ schnorr.verify(sig, challenge, challenge.publicKey)
 If the transport method is `redirect`, `Service` should redirect the user to a specified URL, like in the OAuth2 flow.
 
 
+## (Optional) Fetching user info from other networks
+
+Because Sigauth uses [BIP 39](https://bips.xyz/39), other protocols using BIP 39 can be integrated into Sigauth to fetch user data.
+This part can be used by the `Service` to auto populate user info, like name, avatar, website, etc.
+
+Before signing the challenge, `Signer` can add an optional property into the challenge object containing required information for fetching user data.
+```json
+{
+    "id": "7b4078a8dda...c313ca4ea",
+    "challenge": "b5780fe40bc...17232024c",
+    "callback": "https://service.com/verify",
+    "origin": "service.com",
+    "transports": ["webrtc", "redirect", "polling"],
+    "publicKey": "HEX public key",
+    "PROTOCOL_NAME": {
+      ...
+    }
+}
+```
+
+### [Nostr](https://github.com/nostr-protocol/nostr)
+`Signer` can add some Nostr relays where the user informations are stored.
+```json
+{
+    "id": "7b4078a8dda...c313ca4ea",
+    "challenge": "b5780fe40bc...17232024c",
+    "callback": "https://service.com/verify",
+    "origin": "service.com",
+    "transports": ["webrtc", "redirect", "polling"],
+    "publicKey": "HEX public key",
+    "nostr": {
+      "relays": ["wss://relay1.com", "wss://relay2.com"]
+    }
+}
+```
+
+
 
 ## References
 
