@@ -9,11 +9,11 @@
 **Sigauth** aims to replace LNURL-Auth protocol.
 
 LNURL Auth has been wildly adopted but has some limitation.
-- Bitcoin wallets mostly failed to implement it correctly (wrong deriavation path)
+- Bitcoin wallets mostly failed to implement it correctly (wrong derivation path)
 - You can't import a same seed in two different wallets without having different accounts (it can be related to the first bullet point or because they are not all using [BIP 32](https://bips.xyz/32))
 - Custodial wallets do not follow the specification (they could follow the specification, by generating a dedicated LNURL-Auth private key, but they don't)
-- Most LNURL-Auth implementations are vulnerable to MITM/phishing.
-- Using your wallet (with money on it) to login is a terrible idea. Using a Lightning network node is worst.
+- Most LNURL-Auth implementations are vulnerable to MITM/phishing attacks.
+- Using your wallet (with money on it) to log in is a terrible idea. Using a Lightning network node is worse.
 
 ## Features
 - Passwordless authentication
@@ -21,7 +21,7 @@ LNURL Auth has been wildly adopted but has some limitation.
 
 ## Technical Architecture
 
-Sigauth uses a "proximity check" to prevent Man in the middle (MITM) and Phishing attacks. 
+Sigauth uses a "proximity check" to prevent man-in-the-middle (MITM) and phishing attacks.
 
 ### Transport methods
 
@@ -30,7 +30,7 @@ Sigauth uses a "proximity check" to prevent Man in the middle (MITM) and Phishin
   - Redirection
 - Unsafe
   - Polling
-  > Polling is for remote login only. ⚠️ MITM/Phishing attack are possible. Only use it when safe methods are not possible. **Service can decide to not implement it.**
+  > Polling is for remote login only. ⚠️ MITM/phishing attacks are possible. Only use it when safe methods are not possible. **The service can decide not to implement it.**
 
 ### Private key generation
 
@@ -65,10 +65,10 @@ crypto.randomBytes(32).toString('hex')
 - `challenge`: random string previously generated
 - `callback`: callback url that should be called later with signed result
 - `origin`: root url of the service
-- `transports`: transport methods supported by the `service`
+- `transports`: transport methods supported by the `Service`
 - `signaling`: Websocket url used for signaling WebRTC informations
 
-`Service` stringify this JSON then encode it in base64url.
+`Service` stringifies this JSON and then encodes it in base64url.
 ```js
 base64url.encode(JSON.stringify(json))
 //eyJpZCI6IjdiNDA3OGE4ZGRhOWVlN2Y4ODYzODk2MDJiNWQ5MzBmNTkwYmNmNTVlNTdlNWU3ZTdhMWRkNDdjMzEzY2E0ZWEiLCJjaGFsbGVuZ2UiOiJiNTc4MGZlNDBiY2Q0OWVlYjE3MTRhYzA2MWNlNmZkZDcxMzc3YzFmODU4Y2QwMzU4YTQ3ZWNkMTcyMzIwMjRjIiwiY2FsbGJhY2siOiJodHRwczovL3NlcnZpY2UuY29tL3ZlcmlmeSIsIm9yaWdpbiI6InNlcnZpY2UuY29tIiwidHJhbnNwb3J0cyI6WyJ3ZWJydGMiLCJyZWRpcmVjdCIsInBvbGxpbmciXSwic2lnbmFsaW5nIjoid3NzOi8vc2VydmljZS5jb20ifQ
@@ -84,7 +84,7 @@ base64url.encode(JSON.stringify(json))
 ```js
 base64url.decode("eyJpZCI6IjdiNDA3OGE4ZGRhOWVlN2Y4ODYzODk2MDJiNWQ5MzBmNTkwYmNmNTVlNTdlNWU3ZTdhMWRkNDdjMzEzY2E0ZWEiLCJjaGFsbGVuZ2UiOiJiNTc4MGZlNDBiY2Q0OWVlYjE3MTRhYzA2MWNlNmZkZDcxMzc3YzFmODU4Y2QwMzU4YTQ3ZWNkMTcyMzIwMjRjIiwiY2FsbGJhY2siOiJodHRwczovL3NlcnZpY2UuY29tL3ZlcmlmeSIsIm9yaWdpbiI6InNlcnZpY2UuY29tIiwidHJhbnNwb3J0cyI6WyJ3ZWJydGMiLCJyZWRpcmVjdCIsInBvbGxpbmciXSwic2lnbmFsaW5nIjoid3NzOi8vc2VydmljZS5jb20ifQ")
 ```
-`Signer` should verify that the `id` challenge is correct by calculating SHA256 of the challenge. It aims to verify the challenge has not been altered.
+`Signer` should verify that the id challenge is correct by calculating the SHA256 of the challenge. It aims to verify that the challenge has not been altered.
 ```js
 challenge.id === SHA256(JSON.stringify({challenge, callback, origin, transports, signaling}))
 ```
@@ -144,8 +144,8 @@ Redirection is used when `service` and `signer` are on the same device.
 
 
 User goes on `service.com` and click on a link (`sigauth:eyJjaGFsbGVuZ...`).\
-`Signer` has `sigauth` handler registered. The app is opened and decodes the challenge.\
-`Signer` verifies that `transports` properties contains `redirect`.
+`Signer` has the `sigauth:` handler registered. The app is opened and decodes the challenge.\
+`Signer` verifies that the `transports` properties contains `redirect`.
 
 > Follow [Common steps (WebRTC, Redirection, Polling)](#common-steps)
 
@@ -159,7 +159,7 @@ https://service.com/verify?token=XXX&sig=XXX&redirect=true
 
 #### Polling
 
-⚠️ TODO. LNURL-Auth like flow
+⚠️ TODO. LNURL-Auth-like flow
 
 ### 3. [Service] Challenge verification
 
@@ -201,7 +201,7 @@ Before signing the challenge, `Signer` can add an optional property into the cha
 ```
 
 ### [Nostr](https://github.com/nostr-protocol/nostr)
-`Signer` can add some Nostr relays where the user informations are stored.
+`Signer` can add some Nostr relays where the user information is stored.
 ```json
 {
     "id": "7b4078a8dda...c313ca4ea",
@@ -216,15 +216,12 @@ Before signing the challenge, `Signer` can add an optional property into the cha
 }
 ```
 
-
-
 ## References
 
-LNURL Auth specification links
+LNURL-Auth specification links
 - https://github.com/lnurl/luds/blob/luds/04.md
 - https://github.com/lnurl/luds/blob/luds/05.md
 - https://github.com/lnurl/luds/blob/luds/17.md
-
 
 ## Sepcial thanks
 
