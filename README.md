@@ -12,6 +12,7 @@ LNURL Auth has been wildly adopted but has some limitation.
 - Bitcoin wallets mostly failed to implement it correctly (wrong deriavation path)
 - You can't import a same seed in two different wallets without having different accounts (it can be related to the first bullet point or because they are not all using [BIP 32](https://bips.xyz/32))
 - Custodial wallets do not follow the specification (they could follow the specification, by generating a dedicated LNURL-Auth private key, but they don't)
+- Most LNURL-Auth implementations are vulnerable to MITM/phishing.
 - Using your wallet (with money on it) to login is a terrible idea. Using a Lightning network node is worst.
 
 ## Features
