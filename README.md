@@ -49,7 +49,7 @@ crypto.randomBytes(32).toString('hex')
 // b5780fe40bcd49eeb1714ac061ce6fdd71377c1f858cd0358a47ecd17232024c
 ```
 
-`Service` creates a JSON with these different informations.
+`Service` creates an AuthRequest JSON object with these different informations.
 ```json
 {
   "id": "7b4078a8dda9ee7f886389602b5d930f590bcf55e57e5e7e7a1dd47c313ca4ea",
@@ -68,32 +68,38 @@ crypto.randomBytes(32).toString('hex')
 - `transports`: transport methods supported by the `Service`
 - `signaling`: Websocket url used for signaling WebRTC informations
 
-`Service` stringifies this JSON and then encodes it in base64url.
+`Service` stringifies the AuthRequest and then encodes it in base64url.
 ```js
-base64url.encode(JSON.stringify(json))
+base64url.encode(JSON.stringify(authRequest))
 //eyJpZCI6IjdiNDA3OGE4ZGRhOWVlN2Y4ODYzODk2MDJiNWQ5MzBmNTkwYmNmNTVlNTdlNWU3ZTdhMWRkNDdjMzEzY2E0ZWEiLCJjaGFsbGVuZ2UiOiJiNTc4MGZlNDBiY2Q0OWVlYjE3MTRhYzA2MWNlNmZkZDcxMzc3YzFmODU4Y2QwMzU4YTQ3ZWNkMTcyMzIwMjRjIiwiY2FsbGJhY2siOiJodHRwczovL3NlcnZpY2UuY29tL3ZlcmlmeSIsIm9yaWdpbiI6InNlcnZpY2UuY29tIiwidHJhbnNwb3J0cyI6WyJ3ZWJydGMiLCJyZWRpcmVjdCIsInBvbGxpbmciXSwic2lnbmFsaW5nIjoid3NzOi8vc2VydmljZS5jb20ifQ
 ```
 
 `Serivce` can now expose a QR Code (for `webrtc` and `polling`) containing the previously base64url string generated and/or link with handler `sigauth:[base64url]` (for `redirect`)
 
-### 2. [Signer] Challenge signature
+### 2. [Signer] Signature
 
 #### Common steps (WebRTC, Redirection, Polling)
 
-`Signer` decodes the challenge from base64url to JSON.
+`Signer` decodes the AuthRequest from base64url to JSON.
 ```js
 base64url.decode("eyJpZCI6IjdiNDA3OGE4ZGRhOWVlN2Y4ODYzODk2MDJiNWQ5MzBmNTkwYmNmNTVlNTdlNWU3ZTdhMWRkNDdjMzEzY2E0ZWEiLCJjaGFsbGVuZ2UiOiJiNTc4MGZlNDBiY2Q0OWVlYjE3MTRhYzA2MWNlNmZkZDcxMzc3YzFmODU4Y2QwMzU4YTQ3ZWNkMTcyMzIwMjRjIiwiY2FsbGJhY2siOiJodHRwczovL3NlcnZpY2UuY29tL3ZlcmlmeSIsIm9yaWdpbiI6InNlcnZpY2UuY29tIiwidHJhbnNwb3J0cyI6WyJ3ZWJydGMiLCJyZWRpcmVjdCIsInBvbGxpbmciXSwic2lnbmFsaW5nIjoid3NzOi8vc2VydmljZS5jb20ifQ")
 ```
-`Signer` should verify that the id challenge is correct by calculating the SHA256 of the challenge. It aims to verify that the challenge has not been altered.
+`Signer` should verify that the challenge id is correct by calculating the SHA256 of the AuthRequest. It aims to verify that the AuthRequest has not been altered.
 ```js
-challenge.id === SHA256(JSON.stringify({challenge, callback, origin, transports, signaling}))
+authRequest.id === SHA256(JSON.stringify({
+  challenge: authRequest.challenge,
+  callback: authRequest.callback,
+  origin: authRequest.origin,
+  transports: authRequest.transports,
+  signaling: authRequest.signaling
+}))
 ```
 
-`Signer` prompt the user if he wants to login on `service.com` (`challenge.origin`).
-When accepted, `Signer` add its public key (Hex) to the current challenge object.
+`Signer` prompt the user if he wants to login on `service.com` (`authRequest.origin`).
+When accepted, `Signer` add its public key (Hex) to the current AuthRequest object.
 
 ```js
-const challenge = {
+const authRequest = {
     "id": "7b4078a8dda9ee7f886389602b5d930f590bcf55e57e5e7e7a1dd47c313ca4ea",
     "challenge": "b5780fe40bcd49eeb1714ac061ce6fdd71377c1f858cd0358a47ecd17232024c",
     "callback": "https://service.com/verify",
@@ -103,17 +109,17 @@ const challenge = {
 }
 ```
 
-`Signer` signs (using schnorr) the challenge using its private key
+`Signer` signs (using schnorr) the concatenation result of `challenge:origin` using its private key
 ```js
-const sig = schnorr.sign(challenge, privateKey)
+const sig = schnorr.sign(`${authRequest.challenge}:${authRequest.origin}`, privateKey)
 ```
 
 `Signer` adds 2 query string parameters to the callback URL
-- `token`: containing the modified challenge, base64url encoded
+- `token`: containing the modified AuthRequest, base64url encoded
 - `sig`: containing signature in hex format
 
 ```js
-const tokenBase64url = base64url.encode(JSON.stringify(challenge))
+const tokenBase64url = base64url.encode(JSON.stringify(authRequest))
 const callbackUrl = `https://service.com/verify?token=${tokenBase64url}&sig=${sig}`
 ```
 
@@ -134,7 +140,7 @@ Communication using WebRTC is established directly between the `Signer` and the 
 
 Once the callback URL is generated, `Signer` has to send it to the `Service` using WebRTC. Once it has been received, `Service` can then use it in its workflow (HTTP call, redirect, etc).
 
-`Service` can now verify. See the [3. [Service] Challenge verification](#service-verification) step.
+`Service` can now verify. See the [3. [Service] Signature verification](#service-verification) step.
 
 
 #### Redirection
@@ -144,7 +150,7 @@ Redirection is used when `service` and `signer` are on the same device.
 
 
 User goes on `service.com` and click on a link (`sigauth:eyJjaGFsbGVuZ...`).\
-`Signer` has the `sigauth:` handler registered. The app is opened and decodes the challenge.\
+`Signer` has the `sigauth:` handler registered. The app is opened and decodes the AuthRequest.\
 `Signer` verifies that the `transports` properties contains `redirect`.
 
 > Follow [Common steps (WebRTC, Redirection, Polling)](#common-steps)
@@ -155,26 +161,26 @@ https://service.com/verify?token=XXX&sig=XXX&redirect=true
 ```
 `Signer` opens the callback URL
 
-`Service` can now verify. See the [3. [Service] Challenge verification](#service-verification) step.
+`Service` can now verify. See the [3. [Service] Signature verification](#service-verification) step.
 
 #### Polling
 
 ⚠️ TODO. LNURL-Auth-like flow
 
-### 3. [Service] Challenge verification
+### 3. [Service] Signature verification
 
-`Service` should verify the signed challenge received has not been altered by checking initial properties.
+`Service` should verify the AuthRequest received has not been altered by checking initial properties.
 ```
-challenge.id === initialChallenge.id
-challenge.challenge === initialChallenge.challenge
-challenge.callback === initialChallenge.callback
-challenge.origin === initialChallenge.origin
-challenge.transport === initialChallenge.transport
+authRequest.id === initialAuthRequest.id
+authRequest.challenge === initialAuthRequest.challenge
+authRequest.callback === initialAuthRequest.callback
+authRequest.origin === initialAuthRequest.origin
+authRequest.transport === initialAuthRequest.transport
 ```
 
 `Signer` should validate the signature
 ```js
-schnorr.verify(sig, challenge, challenge.publicKey)
+schnorr.verify(sig, `${authRequest.challenge}:${authRequest.origin}`, authRequest.publicKey)
 ```
 
 If the transport method is `redirect`, `Service` should redirect the user to a specified URL, like in the OAuth2 flow.
@@ -185,7 +191,7 @@ If the transport method is `redirect`, `Service` should redirect the user to a s
 Because Sigauth uses [BIP 39](https://bips.xyz/39), other protocols using BIP 39 can be integrated into Sigauth to fetch user data.
 This part can be used by the `Service` to auto populate user info, like name, avatar, website, etc.
 
-Before signing the challenge, `Signer` can add an optional property into the challenge object containing required information for fetching user data.
+Before signing the challenge, `Signer` can add an optional property into the AuthRequest object containing required information for fetching user data.
 ```json
 {
     "id": "7b4078a8dda...c313ca4ea",
